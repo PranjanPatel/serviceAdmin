@@ -114,7 +114,7 @@ export function Vendors() {
                 <td><span className={`tag ${v.suspended ? 'red' : 'green'}`}>{v.suspended ? 'Suspended' : 'Active'}</span></td>
                 <td className="actions">
                   <button onClick={() => suspend(v)}>{v.suspended ? 'Unsuspend' : 'Suspend'}</button>
-                  <select value="" onChange={(e) => setPlan(v, e.target.value)}>
+                  <select value={v.plan?.type || 'free'} onChange={(e) => setPlan(v, e.target.value)}>
                     <option value="">Set plan...</option>
                     <option value="free">Free</option>
                     <option value="basic">Basic</option>
