@@ -35,6 +35,10 @@ aside h3 {
   color: #fff;
   margin: 0 0 16px 8px;
 }
+.blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
 .nav {
   background: transparent;
   color: #bfdbfe;

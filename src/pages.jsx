@@ -1,26 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 
-// loads a list from the API, with search and paging
-function useList(path, withSearch = true) {
+// loads a list from the API, with search, paging and extra filters
+function useList(path, withSearch = true, extra = {}) {
   const [rows, setRows] = useState([]);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const extraKey = JSON.stringify(extra);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const qs = `?page=${page}${withSearch && q ? `&q=${encodeURIComponent(q)}` : ""}`;
-      setRows(await api(path + qs));
+      const params = new URLSearchParams({ page, ...JSON.parse(extraKey) });
+      if (withSearch && q) params.set("q", q);
+      setRows(await api(`${path}?${params.toString()}`));
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [path, page, q, withSearch]);
+  }, [path, page, q, withSearch, extraKey]);
 
   useEffect(() => {
     load();
@@ -85,6 +87,7 @@ export function Dashboard() {
     ["Vendors", s.vendors],
     ["Paid vendors", s.paidVendors],
     ["Suspended", s.suspended],
+    ["Verified vendors", s.verifiedCount],
     ["Reviews", s.reviews],
     ["Revenue this month", `₹${s.revenueThisMonth}`],
   ];
@@ -99,9 +102,33 @@ export function Dashboard() {
     </div>
   );
 }
+function BlueTick() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      style={{ marginLeft: 6, verticalAlign: "middle" }}
+      role="img"
+      aria-label="Verified"
+    >
+      <title>Verified</title>
+      <circle cx="12" cy="12" r="11" fill="#2563EB" />
+      <path
+        d="M7 12.5l3.2 3.2L17 9"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export function Vendors() {
-  const list = useList("/admin/vendors");
+  const [vf, setVf] = useState(""); // '', 'true' or 'false'
+  const list = useList("/admin/vendors", true, vf ? { verified: vf } : {});
 
   const act = async (fn) => {
     try {
@@ -118,6 +145,21 @@ export function Vendors() {
         api(`/admin/vendors/${v._id}/suspend`, {
           method: "PATCH",
           body: JSON.stringify({ suspended: next }),
+        }),
+      );
+    }
+  };
+  const verify = (v) => {
+    const next = !v.verified;
+    if (
+      confirm(
+        `${next ? "Verify" : "Remove verification from"} ${v.businessName}?`,
+      )
+    ) {
+      act(() =>
+        api(`/admin/vendors/${v._id}/verify`, {
+          method: "PATCH",
+          body: JSON.stringify({ verified: next }),
         }),
       );
     }
@@ -139,7 +181,45 @@ export function Vendors() {
 
   return (
     <>
-      <Toolbar list={list} placeholder="Search business name..." />
+      <div className="toolbar">
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input
+            placeholder="Search business name..."
+            value={list.q}
+            onChange={(e) => {
+              list.setPage(1);
+              list.setQ(e.target.value);
+            }}
+          />
+          <select
+            value={vf}
+            onChange={(e) => {
+              list.setPage(1);
+              setVf(e.target.value);
+            }}
+          >
+            <option value="">All vendors</option>
+            <option value="true">Verified</option>
+            <option value="false">Not verified</option>
+          </select>
+        </div>
+        <div className="pager">
+          <button
+            disabled={list.page <= 1}
+            onClick={() => list.setPage(list.page - 1)}
+          >
+            Prev
+          </button>
+          <span>Page {list.page}</span>
+          <button
+            disabled={list.rows.length < 20}
+            onClick={() => list.setPage(list.page + 1)}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
       <State list={list} />
       {list.rows.length > 0 && (
         <table>
@@ -157,7 +237,10 @@ export function Vendors() {
           <tbody>
             {list.rows.map((v) => (
               <tr key={v._id}>
-                <td>{v.businessName}</td>
+                <td>
+                  {v.businessName}
+                  {v.verified && <BlueTick />}
+                </td>
                 <td>
                   {v.owner?.name}
                   <div className="muted">{v.owner?.email}</div>
@@ -178,13 +261,13 @@ export function Vendors() {
                   </span>
                 </td>
                 <td className="actions">
+                  <button onClick={() => verify(v)}>
+                    {v.verified ? "Unverify" : "Verify"}
+                  </button>
                   <button onClick={() => suspend(v)}>
                     {v.suspended ? "Unsuspend" : "Suspend"}
                   </button>
-                  <select
-                    value={v.plan?.type || "free"}
-                    onChange={(e) => setPlan(v, e.target.value)}
-                  >
+                  <select value="" onChange={(e) => setPlan(v, e.target.value)}>
                     <option value="">Set plan...</option>
                     <option value="free">Free</option>
                     <option value="basic">Basic</option>
