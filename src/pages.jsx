@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
+import { BadgeCheck } from "lucide-react";
 
 // loads a list from the API, with search, paging and extra filters
 function useList(path, withSearch = true, extra = {}) {
@@ -102,27 +103,19 @@ export function Dashboard() {
     </div>
   );
 }
+
 function BlueTick() {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      style={{ marginLeft: 6, verticalAlign: "middle" }}
-      role="img"
-      aria-label="Verified"
-    >
-      <title>Verified</title>
-      <circle cx="12" cy="12" r="11" fill="#2563EB" />
-      <path
-        d="M7 12.5l3.2 3.2L17 9"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <BadgeCheck
+      size={18}
+      color="#2563EB"
+      fill="#2563EB"
+      stroke="white"
+      style={{
+        marginLeft: 6,
+        verticalAlign: "middle",
+      }}
+    />
   );
 }
 
